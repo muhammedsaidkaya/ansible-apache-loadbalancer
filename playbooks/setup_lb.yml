@@ -1,0 +1,56 @@
+---
+- hosts: loadbalancers
+  vars_prompt:
+    - name: admin_password
+      prompt: What is your loadbalancer-admin password?
+  become: yes
+  tasks:
+  - name: Creating template
+    template:
+      src: ../config/lb-config.j2
+      dest: /etc/apache2/conf-enabled/lb.conf
+      mode: 064
+
+  - name: LB manager config
+    copy:
+      src: ../config/loadbalancer-manager.conf
+      dest: /etc/apache2/conf-enabled/loadbalancer-manager.conf
+      mode: 064
+
+  - name: Enable Proxy Server Modules
+    shell: a2enmod proxy && a2enmod proxy_http && a2enmod proxy_balancer && a2enmod lbmethod_bytraffic
+
+  - name: update
+    shell: apt-get update
+
+  - name: pip3 setup
+    shell: apt-get install python3-pip --yes
+
+  - name: Install passlib python package
+    pip:
+      name: passlib
+
+  - name: Add a user to a password file and ensure permissions are set
+    community.general.htpasswd:
+      path: /etc/apache2/htpasswd
+      name: admin
+      password: "{{ admin_password }}"
+  
+  - name: "Restart apache2"
+    systemd:
+      name: apache2
+      daemon_reload: true
+      state: restarted
+      enabled: true
+
+  - name: Flush handlers
+    meta: flush_handlers
+
+  - name: Get services status
+    ansible.builtin.service_facts:
+
+  - name: Check if apache2.service is running
+    ansible.builtin.assert:
+      quiet: true
+      that: ansible_facts.services['apache2.service']['state'] == 'running'
+      fail_msg: apache2.service is not running

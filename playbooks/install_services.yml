@@ -1,0 +1,18 @@
+---
+- hosts: loadbalancers
+  become: yes
+  tasks:
+  - name: Installing apache
+    apt:
+      name: apache2
+      state: present
+
+- hosts: webservers
+  become: yes
+  tasks:
+  - name: Installing services
+    apt:
+      name:
+      - apache2
+      - php
+      state: present

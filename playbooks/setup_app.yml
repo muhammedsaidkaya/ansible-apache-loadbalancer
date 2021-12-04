@@ -1,0 +1,39 @@
+---
+- hosts: webservers
+  become: yes
+  vars:
+    path_to_app: /var/www/html
+  tasks:
+  - name: copy index.php
+    copy:
+      src: ../app/index.php
+      dest: "{{ path_to_app }}"
+      mode: 0755
+  - name: Remove file (delete file)
+    file:
+      path: "{{ path_to_app }}/index.html"
+      state: absent
+
+  - name: create simple info page
+    copy:
+      dest: "{{ path_to_app }}/info.php"
+      content: "<h1>Hello World {{ ansible_hostname }}</h1>"
+  
+  - name: "Restart apache2"
+    systemd:
+      name: apache2
+      daemon_reload: true
+      state: restarted
+      enabled: true
+
+  - name: Flush handlers
+    meta: flush_handlers
+
+  - name: Get services status
+    ansible.builtin.service_facts:
+
+  - name: Check if apache2.service is running
+    ansible.builtin.assert:
+      quiet: true
+      that: ansible_facts.services['apache2.service']['state'] == 'running'
+      fail_msg: apache2.service is not running

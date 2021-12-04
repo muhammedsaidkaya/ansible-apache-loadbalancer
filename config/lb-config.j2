@@ -1,0 +1,11 @@
+ProxyPass "/lb-manager" "!"
+<Proxy balancer://webcluster >
+  {% for host in groups['webservers'] %}
+    BalancerMember http://{{ hostvars[host]['ansible_host'] }}
+  {% endfor %}
+    ProxySet lbmethod=bytraffic
+</Proxy>
+
+ProxyPass / balancer://webcluster/
+ProxyPassReverse / balancer://webcluster/
+BalancerPersist On
